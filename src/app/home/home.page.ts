@@ -1,9 +1,9 @@
 import { Component } from '@angular/core';
+import { SocialSharing } from '@ionic-native/social-sharing/ngx';
 import { ToastController } from '@ionic/angular';
 import { Item } from '../models/models';
 import { GroceriesService } from '../services/groceries.service';
 import { InputDialogService } from '../services/input-dialog.service';
-import { SocialSharing } from '@ionic-native/social-sharing/ngx';
 
 @Component({
   selector: 'app-home',
@@ -14,10 +14,23 @@ export class HomePage {
 
   title = "Grocery"
 
-  constructor(private toastController: ToastController, private groceryService: GroceriesService, private inputDialogService: InputDialogService, private socialSharing: SocialSharing) { }
+  items: Item[] = [];
+  errorMessage: string;
+
+  constructor(private toastController: ToastController, private groceryService: GroceriesService, private inputDialogService: InputDialogService, private socialSharing: SocialSharing) {
+    groceryService.dataChanged$.subscribe(this.loadItems.bind(this));
+  }
+
+  ngOnInit() {
+    this.loadItems();
+  }
 
   public loadItems() {
-    return this.groceryService.getItems();
+    console.log("loadItems triggred");
+    this.groceryService.getItems().subscribe(
+      items => this.items = items,
+      error => this.errorMessage = error,
+    );
   }
 
   /**
@@ -31,30 +44,23 @@ export class HomePage {
    * Remove the item at given index.
    * @param index item index.
    */
-  public async removeItem(index: number) {
-    const toast = await this.toastController.create({
-      message: 'Removing Item',
-      duration: 3000
-    });
-    await toast.present();
-
-    this.groceryService.removeItem(index);
-
+  public async removeItem(item: Item) {
+    console.log('Removing', item);
+    this.groceryService.removeItem(item._id);
   }
 
   /**
    * Edit the item at given index.
    * @param item the item to edit
-   * @param index item index.
    */
-  public async editItem(item: Item, index: number) {
+  public async editItem(item: Item) {
     const toast = await this.toastController.create({
       message: 'Editing Item',
       duration: 3000
     });
     await toast.present();
 
-    await this.inputDialogService.showPrompt(item, index);
+    await this.inputDialogService.showPrompt(item, item._id);
   }
 
   /**

@@ -13,11 +13,11 @@ export class InputDialogService {
   /**
    * Add/Edit an item via alert dialog prompt.
    * @param item the item to edit. Optional if adding.
-   * @param index the item index. Optional if adding.
+   * @param id the item id. Optional if adding.
    * @param message optional message. Can be used for displaying error message.
    */
-  public async showPrompt(item?: Item, index?: number, message?: string) {
-    const isEdit = item && index != undefined;
+  public async showPrompt(item?: Item, id?: string, message?: string) {
+    const isEdit = item && id != undefined;
     const prompt = await this.alertController.create({
       header: isEdit ? "Edit Item" : "Add Item",
       message: message,
@@ -44,7 +44,8 @@ export class InputDialogService {
           handler: async (item: Item) => {
             if (this.validateItem(item)) {
               if (isEdit) {
-                this.groceryService.editItem(item, index);
+                item._id = id;
+                this.groceryService.editItem(item);
               }
               else {
                 this.groceryService.addItem(item);
@@ -58,7 +59,7 @@ export class InputDialogService {
             }
             else {
               // Show the prompt again, if the item is not valid.
-              this.showPrompt(item, index, "Please eneter valid data");
+              this.showPrompt(item, "Please eneter valid data");
             }
           }
         }

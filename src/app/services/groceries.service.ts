@@ -1,4 +1,7 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { Observable, of, Subject } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { Item } from '../models/models';
 
 @Injectable({
@@ -6,14 +9,26 @@ import { Item } from '../models/models';
 })
 export class GroceriesService {
   private items: Item[] = [];
-  constructor() { }
+
+  private baseUrl = "http://localhost:8080";
+  private dataChangeSubject: Subject<boolean>;
+
+  public dataChanged$: Observable<boolean>;
+
+  constructor(private http: HttpClient) {
+    this.dataChangeSubject = new Subject<boolean>();
+    this.dataChanged$ = this.dataChangeSubject.asObservable();
+  }
 
   /**
-   * Remove the item at given index.
-   * @param index item index.
+   * Remove the item with given id.
+   * @param id item id.
    */
-  public removeItem(index: number) {
-    this.items.splice(index, 1);
+  public removeItem(id: string) {
+    this.http.delete(`${this.baseUrl}/api/groceries/${id}`).subscribe((res: Item[]) => {
+      this.items = res;
+      this.dataChangeSubject.next(true);
+    });
   }
 
   /**
@@ -21,23 +36,43 @@ export class GroceriesService {
    * @param item the item to add.
    */
   public addItem(item: Item) {
-    this.items.push(item);
+    this.http.post(`${this.baseUrl}/api/groceries`, item).subscribe((res: Item[]) => {
+      this.items = res;
+      this.dataChangeSubject.next(true);
+    })
   }
 
   /**
    * Update the item at given index.
    * @param item the item to update.
-   * @param index item index.
    */
-  public editItem(item: Item, index: number) {
-    this.items[index] = item;
+  public editItem(item: Item) {
+    this.http.put(`${this.baseUrl}/api/groceries/${item._id}`, item).subscribe((res: Item[]) => {
+      this.items = res;
+      this.dataChangeSubject.next(true);
+    });
   }
 
   /**
    * Get a list of all the items
    * @returns list of items
    */
-  public getItems(): Item[] {
-    return this.items;
+  public getItems(): Observable<Item[]> {
+    return this.http.get(`${this.baseUrl}/api/groceries`).pipe(
+      map((res: Item[]) => {
+        return res || [];
+      }),
+      catchError(this.handleError<Item[]>('getItems', [])),
+    );
+  }
+
+  private handleError<T>(operation = 'operation', result?: T) {
+    return (error: any): Observable<T> => {
+      console.error(error);
+      console.log(`${operation} failed: ${error.message}`);
+
+      // Let the app keep running by returning an empty result.
+      return of(result as T);
+    };
   }
 }
